@@ -64,11 +64,16 @@ hr.divider { border: none; border-top: 1px solid var(--gray); margin: 12px 0; }
   max-width: 960px;
 }
 
-/* Three-column layout */
-.tri-grid {
+/* Top decision board and bottom persistent map */
+.top-board {
   display: grid;
-  grid-template-columns: 1fr 1.3fr 1fr;
+  grid-template-columns: 380px 1fr; /* left chat narrow, right decision wide */
   gap: 16px;
+  min-height: 40vh; /* target ~40% */
+}
+.bottom-map {
+  margin-top: 16px;
+  height: 60vh; /* dominant */
 }
 
 .section-label {
@@ -169,6 +174,13 @@ hr.divider { border: none; border-top: 1px solid var(--gray); margin: 12px 0; }
   box-shadow: 0 0 0 2px rgba(0,0,0,0.3);
   left: 0%;
 }
+
+/* Pulse animation when severity updates */
+.pulse { animation: pulse 0.9s ease-out; }
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.25); }
+  100% { box-shadow: 0 0 0 10px rgba(255,255,255,0); }
+}
 .decision-header {
   display: flex;
   align-items: center;
@@ -208,6 +220,14 @@ hr.divider { border: none; border-top: 1px solid var(--gray); margin: 12px 0; }
 .confidence-cues li { margin: 6px 0; }
 .confidence-cues.subtle ul { padding-left: 16px; }
 .confidence-cues.subtle li { color: var(--muted); font-size: 13px; }
+
+/* Tabs and map */
+.tabs { display: flex; gap: 8px; margin-bottom: 8px; }
+.tab { background: #1a1d25; color: var(--text); border: 1px solid var(--gray); border-radius: 999px; padding: 6px 10px; cursor: pointer; font-size: 12px; }
+.tab.active { border-color: var(--accent); }
+.tab-panel { min-height: 0; }
+#map { height: 100%; width: 100%; border: 1px solid var(--gray); border-radius: 10px; }
+.map { height: 100%; width: 100%; border: 1px solid var(--gray); border-radius: 10px; }
 
 /* Actions */
 action-row { display: flex; }
@@ -275,5 +295,6 @@ action-row { display: flex; }
   #app { grid-template-columns: 1fr; }
   .scenario-panel { order: 2; border-right: none; border-top: 1px solid var(--gray); }
   .main { order: 1; }
-  .tri-grid { grid-template-columns: 1fr; }
+  .top-board { grid-template-columns: 1fr; }
+  .bottom-map { height: 50vh; }
 }

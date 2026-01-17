@@ -3,14 +3,17 @@
 // Usage:
 //   ANTHROPIC_API_KEY=xxxx npm start
 
-const express = require('express');
-const cors = require('cors');
+import express from 'express';
+import cors from 'cors';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors({ origin: [/^http:\/\/localhost:\d+$/, /^http:\/\/127\.0\.0\.1:\d+$/] }));
 app.use(express.json({ limit: '1mb' }));
+
+// Serve static files
+app.use(express.static('.'));
 
 app.post('/api/chat', async (req, res) => {
   try {

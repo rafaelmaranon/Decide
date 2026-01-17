@@ -82,6 +82,11 @@
     lanePartiallyBlocked: false,
     // Visualization severity score (0-100). If null, derive from state.
     severityScore: null,
+    // Vehicle location and meta
+    vehicleId: 'V-1027',
+    vehicle_lat: 37.7749,  // default SF
+    vehicle_lng: -122.4194,
+    lastLocationUpdate: null,
   };
 
   // Track previous recommendation for status banner
@@ -227,6 +232,15 @@
     closeModal: document.getElementById('closeModal'),
     overrideSelect: document.getElementById('overrideSelect'),
     applyOverride: document.getElementById('applyOverride'),
+
+    // Right column tabs and map
+    tabMap: document.getElementById('tabMap'),
+    tabSignals: document.getElementById('tabSignals'),
+    panelMap: document.getElementById('panelMap'),
+    panelSignals: document.getElementById('panelSignals'),
+    mapContainer: document.getElementById('map'),
+    lastLocUpdate: document.getElementById('lastLocUpdate'),
+    rightSignals: document.getElementById('rightSignals'),
   };
 
   // ----- Chat state and agents -----
@@ -394,6 +408,19 @@
     els.confidenceList.innerHTML = rec.cues
       .map(([label, answer]) => `<li><strong>${escapeHtml(label)}:</strong> ${escapeHtml(answer)}</li>`) 
       .join('');
+
+    // Right signals mirror (compact)
+    const right = [
+      ['Vehicle', `${signals.vehicleId || 'Unknown'}`],
+      ['Lat', `${Number(signals.vehicle_lat).toFixed(5)}`],
+      ['Lng', `${Number(signals.vehicle_lng).toFixed(5)}`],
+      ['Condition', `${signals.condition}`],
+      ['Priority', `${rec.priority}`],
+    ];
+    // els.rightSignals.innerHTML = right.map(([k,v])=>`<li><strong>${escapeHtml(k)}:</strong> ${escapeHtml(v)}</li>`).join('');
+
+    // Map updates
+    updateMap(rec);
   }
 
   // badges no longer used in tri-grid context
@@ -458,6 +485,9 @@
       riderOnboard: true,
       policePresent: false,
       drivable: true,
+      vehicle_lat: 37.8067, // SF Marina
+      vehicle_lng: -122.4376,
+      lastLocationUpdate: new Date().toISOString(),
     }),
     stuckRider: () => ({
       condition: Condition.STUCK,
@@ -585,11 +615,111 @@
   els.askInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAsk(); });
 
   // ----- Initial render -----
-  render();
-  startTicker();
+  // Delay initial render to allow map to initialize
+  setTimeout(() => {
+    render();
+    startTicker();
+  }, 500);
 
   // Seed a couple of initial context items for the demo
   addChatMessage('Mission Control', 'Initial check: no injuries reported');
+
+
+  // ----- Leaflet Map Integration -----
+  let map = null;
+  let marker = null;
+  let impactCircle = null;
+
+  // Ensure map is initialized after DOM loads and Leaflet is available
+  function waitForLeafletAndInit() {
+    if (typeof window.L !== 'undefined' && document.getElementById('map')) {
+      initMap();
+    } else {
+      setTimeout(waitForLeafletAndInit, 100);
+    }
+  }
+  
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', waitForLeafletAndInit);
+  } else {
+    waitForLeafletAndInit();
+  }
+
+  function initMap() {
+    console.log('initMap called');
+    if (!els.mapContainer) {
+      console.log('Map container not found');
+      return;
+    }
+    console.log('Map container found:', els.mapContainer);
+    if (typeof window.L === 'undefined') {
+      console.log('Leaflet not loaded');
+      els.mapContainer.innerHTML = '<div style="color:#e02424;text-align:center;padding:2em;font-size:18px;">Leaflet not loaded</div>';
+      return;
+    }
+    console.log('Leaflet is available');
+    if (map) {
+      console.log('Map already exists');
+      return;
+    }
+    console.log('Creating map with coordinates:', signals.vehicle_lat, signals.vehicle_lng);
+    try {
+      map = L.map('map', { zoomControl: true }).setView([signals.vehicle_lat, signals.vehicle_lng], 16);
+      console.log('Map created successfully');
+    } catch (error) {
+      console.error('Error creating map:', error);
+      els.mapContainer.innerHTML = '<div style="color:#e02424;text-align:center;padding:2em;font-size:18px;">Map initialization failed: ' + error.message + '</div>';
+      return;
+    }
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+    marker = L.circleMarker([signals.vehicle_lat, signals.vehicle_lng], {
+      radius: 8,
+      color: severityColor(evaluate(signals).state),
+      fillColor: severityColor(evaluate(signals).state),
+      fillOpacity: 0.9,
+      weight: 2,
+    }).addTo(map).bindTooltip(`${signals.vehicleId} • ${signals.condition}`, { permanent: false });
+    impactCircle = L.circle([signals.vehicle_lat, signals.vehicle_lng], { radius: 100, color: '#5a86ff22' }).addTo(map);
+    console.log('Map initialization complete with marker and circle');
+  }
+
+  function severityColor(state) {
+    switch (state) {
+      case State.MONITOR: return '#1f9d55';
+      case State.REMOTE: return '#e3a008';
+      case State.FIELD: return '#e85d38';
+      case State.SERVICE: return '#e02424';
+      default: return '#1f9d55';
+    }
+  }
+
+  function updateMap(rec) {
+    if (!map) {
+      initMap();
+    }
+    if (!map || !marker || !impactCircle) {
+      console.log('Map not ready for update:', { map: !!map, marker: !!marker, impactCircle: !!impactCircle });
+      return;
+    }
+    const lat = Number(signals.vehicle_lat);
+    const lng = Number(signals.vehicle_lng);
+    // Update marker style and position
+    marker.setStyle({ color: severityColor(rec.state), fillColor: severityColor(rec.state) });
+    marker.setLatLng([lat, lng]);
+    marker.setTooltipContent(`${signals.vehicleId} • ${signals.condition}`);
+    impactCircle.setLatLng([lat, lng]);
+    els.lastLocUpdate.textContent = `Last location update: ${signals.lastLocationUpdate ? new Date(signals.lastLocationUpdate).toLocaleTimeString() : '—'}`;
+    // Recenter only if marker left viewport
+    const pt = map.latLngToContainerPoint([lat, lng]);
+    const within = pt.x >= 0 && pt.y >= 0 && pt.x <= map.getSize().x && pt.y <= map.getSize().y;
+    if (!within) map.panTo([lat, lng]);
+    // Always invalidate size after render to fix visibility
+    setTimeout(() => map.invalidateSize(), 0);
+  }
+
 
   // ----- Cloud chat integration (optional) -----
   function lastQAHistory(maxPairs = 3) {
