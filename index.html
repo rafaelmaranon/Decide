@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DECIDE — Incident Decision Assistant</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="app">
+    <!-- Scenario Selector (demo-only) -->
+    <aside class="scenario-panel">
+      <h2>DEMO — Simulate scenarios</h2>
+      <div class="scenario-buttons">
+        <button class="scenario-btn" data-scenario="blocked1">Blocked 1 min (transient)</button>
+        <button class="scenario-btn" data-scenario="blocked6">Blocked 6 min with rider</button>
+        <button class="scenario-btn" data-scenario="stuckRider">Stuck with rider</button>
+        <button class="scenario-btn" data-scenario="stuckPolice">Stuck with police</button>
+        <button class="scenario-btn" data-scenario="degradedND">Degraded not drivable</button>
+      </div>
+      <div class="scenario-tools">
+        <button id="add5min">+5m (still blocked)</button>
+        <button id="resetAttempts">Reset Attempts</button>
+      </div>
+
+      <hr class="divider" />
+      <h2>DEMO — Inject Context Updates</h2>
+      <div class="scenario-buttons">
+        <button class="inject-btn" data-src="Police" data-msg="Police arrived on scene">Police arrived on scene</button>
+        <button class="inject-btn" data-src="Police" data-msg="Police request immediate removal">Police request immediate removal</button>
+        <button class="inject-btn" data-src="Fleet Recovery" data-msg="Tow ETA 12 minutes">Tow ETA 12 minutes</button>
+        <button class="inject-btn" data-src="Rider Support" data-msg="Rider anxious, requesting update">Rider anxious, requesting update</button>
+        <button class="inject-btn" data-src="Mission Control" data-msg="Remote assist attempt failed">Remote assist attempt failed</button>
+        <button class="inject-btn" data-src="Mission Control" data-msg="Lane partially blocked">Lane partially blocked</button>
+        <button class="inject-btn" data-src="Rider Support" data-msg="No injuries reported">No injuries reported</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <!-- Status Banner (optional) -->
+      <div id="statusBanner" class="status-banner hidden"></div>
+
+      <!-- Three-column layout: Context | Decision | Confidence -->
+      <div class="tri-grid">
+        <!-- LEFT: CONTEXT -->
+        <section class="context" aria-label="Context">
+          <h3 class="section-label">CONTEXT</h3>
+          <!-- Structured signals (read-only) -->
+          <ul id="contextList" class="context-list">
+            <!-- Populated by JS as one-line signals -->
+          </ul>
+
+          <!-- Context Chat (Aggregator) -->
+          <div class="chat">
+            <div class="chat-header">
+              <div class="chat-title">Context Chat</div>
+              <div class="chat-sub">Real-time coordination summary</div>
+            </div>
+            <div class="chat-pinned">
+              <div class="pinned-title">Live Context Summary <span class="meta">(Agent Reasoning)</span></div>
+              <ul id="liveSummaryList" class="pinned-list"></ul>
+            </div>
+            <div id="chatFeed" class="chat-feed" aria-live="polite"></div>
+            <div class="chat-input">
+              <input id="askInput" type="text" placeholder="Ask DECIDE…" />
+              <button id="askSend" class="action">Ask</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- CENTER: RECOMMENDED ACTION -->
+        <section class="decision-col" aria-label="Decision">
+          <h3 class="section-label primary">RECOMMENDED ACTION</h3>
+          <section id="decisionCard" class="decision-card" aria-live="polite">
+            <!-- Populated by JS -->
+          </section>
+          <div id="lastEvaluated" class="last-evaluated" aria-live="polite"></div>
+          <section class="actions">
+            <button id="confirmBtn" class="action confirm primary">Confirm</button>
+            <button id="escalateBtn" class="action escalate">Escalate</button>
+            <button id="overrideBtn" class="action override">Override</button>
+          </section>
+          <div class="hint">Escalation path: <strong>Monitor → Remote Assist → Field Recovery → Service</strong></div>
+        </section>
+
+        <!-- RIGHT: CONFIDENCE CHECK -->
+        <section class="confidence" aria-label="Confidence">
+          <h3 class="section-label">CONFIDENCE CHECK</h3>
+          <section class="confidence-cues subtle">
+            <ul id="confidenceList">
+              <!-- Three bullets inserted here -->
+            </ul>
+          </section>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Override Modal -->
+  <div id="overrideModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="overrideTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="overrideTitle">Override Recommendation</h3>
+        <button id="closeModal" class="icon-btn" aria-label="Close">✖️</button>
+      </div>
+      <div class="modal-body">
+        <label for="overrideSelect">Choose level</label>
+        <select id="overrideSelect">
+          <option value="monitor">🟢 Monitor</option>
+          <option value="remote">🟡 Remote Assist</option>
+          <option value="field">🔴 Field Recovery</option>
+          <option value="service">⚙️ Service</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button id="applyOverride" class="action confirm">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
